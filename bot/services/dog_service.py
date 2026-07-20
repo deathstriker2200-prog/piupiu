@@ -65,14 +65,9 @@ async def purchase_dog(user_id: int, dog_id: str) -> None:
     if user.level < breed.required_level:
         raise DogError(f"level_required:{breed.required_level}")
 
-    if breed.price_currency in ("tiriak", "both") and user.tiriak_point < breed.price:
+    if user.tiriak_point < breed.price:
         raise DogError("not_enough_money")
-    if breed.price_currency == "diamond" and user.diamond < breed.price:
-        raise DogError("not_enough_diamond")
 
-    if breed.price_currency == "diamond":
-        await user_repo.adjust_diamond(user_id, -breed.price)
-    else:
-        await user_repo.adjust_tiriak(user_id, -breed.price)
+    await user_repo.adjust_tiriak(user_id, -breed.price)
 
     await dog_repo.add_dog_to_user(user_id, dog_id)

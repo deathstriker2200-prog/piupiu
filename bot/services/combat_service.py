@@ -3,13 +3,18 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Optional
 
-from bot.config.game_config import DEATH_RESPAWN_SECONDS
+from bot.config.game_config import (
+    AMMO_REPURCHASE_COOLDOWN_SECONDS,
+    DEATH_RESPAWN_SECONDS,
+    DEFAULT_WEAPON_ID,
+    KILL_TIRIAK_BONUS,
+)
 from bot.database.repositories import user_repo, weapon_repo
 from bot.services import combo_service
 from bot.services.attack_line_service import get_varied_attack_line
 from bot.services.critical_service import CriticalOutcome, roll_outcome
 from bot.services.energy_service import EnergyError, consume_energy
-from bot.services.level_service import bonus_damage_for_level
+from bot.services.level_service import add_xp_and_check_levelup, bonus_damage_for_level
 
 
 class CombatError(Exception):
@@ -20,7 +25,9 @@ class CombatError(Exception):
 class AttackResult:
     weapon_name: str
     weapon_emoji: str
+    weapon_id: str
     damage: int
+    target_max_hp: int
     target_remaining_hp: int
     tiriak_stolen: int
     target_died: bool
@@ -30,9 +37,17 @@ class AttackResult:
     combo_count: int
     combo_damage_bonus_applied: bool
     flavor_text: str
+    # جایزه‌های شلیک
+    tiriak_reward: int         # جایزه معمولی شلیک (بدون احتساب کیل‌بونس و سرقت)
+    xp_reward: int
+    kill_bonus_tiriak: int     # فقط اگه target_died باشه پر میشه (KILL_TIRIAK_BONUS)
+    total_tiriak_reward: int   # مجموع همه جایزه‌های تریاک‌پوینت این شلیک برای مهاجم
+    ran_out_of_ammo: bool      # همین شلیک آخرین تیر رو مصرف کرد
+    respawn_minutes: int       # فقط اگه target_died باشه معتبره
 
 
 STEAL_PERCENT_ON_KILL = 0.05  # درصد تریاک‌پوینت که هنگام کشتن از قربانی دزدیده میشه
+KILL_XP_BASE = 80  # پایه XP کشتن، به علاوه قدرت سلاح
 
 
 async def resolve_attack(attacker_id: int, target_id: int) -> AttackResult:
@@ -51,7 +66,12 @@ async def resolve_attack(attacker_id: int, target_id: int) -> AttackResult:
             raise CombatError("attacker_jailed")
 
     if target.is_dead:
-        raise CombatError("target_dead")
+        seconds_left = 0
+        if target.died_at:
+            died_at_dt = datetime.fromisoformat(target.died_at)
+            respawn_dt = died_at_dt + timedelta(seconds=DEATH_RESPAWN_SECONDS)
+            seconds_left = max(0, int((respawn_dt - datetime.utcnow()).total_seconds()))
+        raise CombatError(f"target_dead:{seconds_left}")
 
     weapon_row = await weapon_repo.get_equipped_weapon(attacker_id)
     if weapon_row is None:
@@ -74,10 +94,19 @@ async def resolve_attack(attacker_id: int, target_id: int) -> AttackResult:
         raise CombatError(str(e))
 
     # چک تیر برای سلاح‌های گرم
+    ran_out_of_ammo = False
     if weapon_row["needs_ammo"]:
         if weapon_row["ammo_current"] <= 0:
             raise CombatError(f"out_of_ammo:{weapon_row['name_fa']}")
-        await weapon_repo.set_ammo(attacker_id, weapon_id, weapon_row["ammo_current"] - 1)
+        remaining_ammo = weapon_row["ammo_current"] - 1
+        await weapon_repo.set_ammo(attacker_id, weapon_id, remaining_ammo)
+        if remaining_ammo <= 0:
+            ran_out_of_ammo = True
+            # سلاح فعال به‌صورت خودکار به تفنگ آب‌پاش تغییر می‌کنه
+            await weapon_repo.equip_weapon(attacker_id, DEFAULT_WEAPON_ID)
+            # یک دقیقه کول‌دان برای خرید دوباره مهمات همین سلاح
+            ammo_cooldown_until = datetime.utcnow() + timedelta(seconds=AMMO_REPURCHASE_COOLDOWN_SECONDS)
+            await weapon_repo.set_ammo_cooldown(attacker_id, weapon_id, ammo_cooldown_until.isoformat())
 
     # نتیجه Critical رو مشخص کن (Miss/Block/Normal/Critical/Headshot/Lucky Hit)
     outcome: CriticalOutcome = roll_outcome(attacker.luck)
@@ -102,13 +131,32 @@ async def resolve_attack(attacker_id: int, target_id: int) -> AttackResult:
     new_hp = target.hp - damage
     target_died = damage > 0 and new_hp <= 0
 
+    # جایزه هر شلیک: بر اساس قدرت سلاح و دمیج واقعی وارد شده
+    tiriak_reward = 0
+    xp_reward = 0
+    if damage > 0:
+        tiriak_reward = int(damage * 2 + weapon_row["damage"] * 0.5)
+        xp_reward = int(damage * 0.3 + weapon_row["damage"] * 0.15)
+
     tiriak_stolen = 0
+    kill_bonus_tiriak = 0
+    respawn_minutes = 0
     if target_died:
         tiriak_stolen = int(target.tiriak_point * STEAL_PERCENT_ON_KILL)
         await _handle_death(target_id, attacker_id, tiriak_stolen)
         await user_repo.increment_kills(attacker_id)
+
+        kill_bonus_tiriak = KILL_TIRIAK_BONUS
+        xp_reward += KILL_XP_BASE + weapon_row["damage"]
+        respawn_minutes = max(1, DEATH_RESPAWN_SECONDS // 60)
     elif damage > 0:
         await user_repo.update_hp(target_id, new_hp)
+
+    total_tiriak_reward = tiriak_reward + kill_bonus_tiriak
+    if total_tiriak_reward > 0:
+        await user_repo.adjust_tiriak(attacker_id, total_tiriak_reward)
+    if xp_reward > 0:
+        await add_xp_and_check_levelup(attacker_id, xp_reward)
 
     # ست کردن کولدان بعدی
     cooldown_until = datetime.utcnow() + timedelta(seconds=weapon_row["cooldown_sec"])
@@ -127,7 +175,9 @@ async def resolve_attack(attacker_id: int, target_id: int) -> AttackResult:
     return AttackResult(
         weapon_name=weapon_row["name_fa"],
         weapon_emoji=weapon_row["emoji"],
+        weapon_id=weapon_id,
         damage=damage,
+        target_max_hp=target.max_hp,
         target_remaining_hp=max(new_hp, 0) if damage > 0 else target.hp,
         tiriak_stolen=tiriak_stolen,
         target_died=target_died,
@@ -136,6 +186,12 @@ async def resolve_attack(attacker_id: int, target_id: int) -> AttackResult:
         combo_count=combo_count,
         combo_damage_bonus_applied=combo_bonus_applied,
         flavor_text=flavor_text,
+        tiriak_reward=tiriak_reward,
+        xp_reward=xp_reward,
+        kill_bonus_tiriak=kill_bonus_tiriak,
+        total_tiriak_reward=total_tiriak_reward,
+        ran_out_of_ammo=ran_out_of_ammo,
+        respawn_minutes=respawn_minutes,
     )
 
 

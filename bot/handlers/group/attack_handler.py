@@ -24,7 +24,7 @@ async def handle_attack(message: Message, user: User) -> None:
         return
 
     if target_id == message.from_user.id:
-        await message.reply("به خودت شلیک نکن روانی 😂")
+        await message.reply(battle_texts.self_shoot_attempt())
         return
 
     target_user_obj = (
@@ -34,15 +34,9 @@ async def handle_attack(message: Message, user: User) -> None:
     )
     if target_user_obj and target_user_obj.is_bot:
         if target_user_obj.id == message.bot.id:
-            await message.reply("رو من که نمیشه شلیک کرد داداش من رفرمو میدم نه HP 😎")
+            await message.reply(battle_texts.bot_shoot_attempt())
         else:
             await message.reply("رو ربات‌ها نمیشه شلیک کرد یه آدم واقعی رو نشونه بگیر 🎯")
-        return
-
-    try:
-        result: AttackResult = await resolve_attack(message.from_user.id, target_id)
-    except CombatError as e:
-        await _handle_combat_error(message, str(e))
         return
 
     target_name = (
@@ -51,20 +45,40 @@ async def handle_attack(message: Message, user: User) -> None:
         else "حریف"
     )
 
-    text = battle_texts.attack_result_v2(
-        flavor_text=result.flavor_text,
-        outcome=result.outcome,
-        damage=result.damage,
-        remaining_hp=result.target_remaining_hp,
-        stolen=result.tiriak_stolen,
-        combo_count=result.combo_count,
-        combo_bonus_applied=result.combo_damage_bonus_applied,
-    )
-    await message.reply(text)
+    try:
+        result: AttackResult = await resolve_attack(message.from_user.id, target_id)
+    except CombatError as e:
+        await _handle_combat_error(message, str(e), target_name)
+        return
 
     if result.target_died:
-        await message.answer(battle_texts.target_died(target_name))
+        text = battle_texts.attack_result_killed(
+            weapon_name=result.weapon_name,
+            weapon_emoji=result.weapon_emoji,
+            target_name=target_name,
+            damage=result.damage,
+            kill_bonus=result.kill_bonus_tiriak,
+            total_tiriak_reward=result.total_tiriak_reward,
+            xp_reward=result.xp_reward,
+            respawn_minutes=result.respawn_minutes,
+        )
+    else:
+        text = battle_texts.attack_result_alive(
+            weapon_name=result.weapon_name,
+            weapon_emoji=result.weapon_emoji,
+            target_name=target_name,
+            damage=result.damage,
+            tiriak_reward=result.tiriak_reward,
+            xp_reward=result.xp_reward,
+            remaining_hp=result.target_remaining_hp,
+            max_hp=result.target_max_hp,
+        )
+    await message.reply(text)
 
+    if result.ran_out_of_ammo:
+        await message.answer(battle_texts.ammo_depleted(result.weapon_name))
+
+    if result.target_died:
         # چک اینکه آیا بانک قربانی خالی بوده و پول از دست رفته یا نه رو داخل combat_service مدیریت کردیم
         from bot.database.repositories import bank_repo
 
@@ -113,13 +127,17 @@ async def handle_attack(message: Message, user: User) -> None:
         await message.answer(await badge_earned(badge_id))
 
 
-async def _handle_combat_error(message: Message, error: str) -> None:
+async def _handle_combat_error(message: Message, error: str, target_name: str = "حریف") -> None:
     if error == "attacker_dead":
         await message.reply(battle_texts.attacker_is_dead())
     elif error == "attacker_jailed":
         await message.reply(battle_texts.attacker_is_jailed(0))
-    elif error == "target_dead":
-        await message.reply(battle_texts.target_is_dead_already("حریف"))
+    elif error.startswith("target_dead"):
+        seconds_left = 0
+        if ":" in error:
+            seconds_left = int(error.split(":", 1)[1])
+        minutes_left = max(1, (seconds_left + 59) // 60) if seconds_left > 0 else 0
+        await message.reply(battle_texts.target_is_dead_already(target_name, minutes_left))
     elif error == "no_weapon":
         await message.reply(battle_texts.no_weapon_equipped())
     elif error.startswith("cooldown:"):

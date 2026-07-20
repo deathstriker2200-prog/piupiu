@@ -15,9 +15,9 @@ from bot.services.level_service import add_xp_and_check_levelup
 STREAK_MILESTONES = [
     (1, 50, 0),
     (3, 100, 0),
-    (7, 200, 1),
-    (14, 350, 2),
-    (30, 800, 5),
+    (7, 200, 100),   # 1 الماس قدیمی = 100 تریاک‌پوینت (الماس حذف شده)
+    (14, 350, 200),
+    (30, 800, 500),
 ]
 BASE_REWARD_TIRIAK = 30
 BASE_REWARD_XP = 10
@@ -28,12 +28,14 @@ class DailyLoginError(Exception):
 
 
 def _reward_for_streak(streak: int) -> tuple:
-    """برمی‌گردونه (تریاک‌پوینت, الماس) بر اساس روز فعلی streak"""
+    """برمی‌گردونه (تریاک‌پوینت, الماس) بر اساس روز فعلی streak - الماس حذف شده پس همیشه صفره"""
     tiriak = BASE_REWARD_TIRIAK + streak * 15
-    diamond = 0
-    for milestone_day, _, milestone_diamond in STREAK_MILESTONES:
+    bonus_tiriak = 0
+    for milestone_day, _, milestone_bonus in STREAK_MILESTONES:
         if streak >= milestone_day:
-            diamond = milestone_diamond
+            bonus_tiriak = milestone_bonus
+    tiriak += bonus_tiriak
+    diamond = 0  # سیستم الماس کاملاً حذف شده
     return tiriak, diamond
 
 
