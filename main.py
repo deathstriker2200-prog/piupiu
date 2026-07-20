@@ -6,6 +6,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 
+from bot.config.bot_commands import setup_bot_commands
 from bot.config.settings import settings
 from bot.database.db import init_db
 from bot.handlers import register_all_handlers
@@ -32,10 +33,12 @@ async def main() -> None:
     register_all_middlewares(dp)
     register_all_handlers(dp)
 
+    await setup_bot_commands(bot)
+
     scheduler = setup_scheduler(bot)
     scheduler.start()
 
-    log.info("ربات تریاکی پیو پیو روشن شد 🔥")
+    log.info("ربات بنگ بنگ روشن شد 🔥")
     try:
         await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
     finally:
