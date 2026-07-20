@@ -12,10 +12,10 @@ router = Router(name="group_attack")
 router.message.filter(IsGroupChat())
 
 
-ATTACK_TRIGGERS = {"پیو", "🔫"}
+ATTACK_TRIGGERS = {"بنگ", "🔫"}
 
 
-@router.message(Command("پیو"))
+@router.message(Command("bang"))
 @router.message(lambda m: m.text and m.text.strip().split()[0].lstrip("/") in ATTACK_TRIGGERS)
 async def handle_attack(message: Message, user: User) -> None:
     target_id = await extract_target_user_id(message)
@@ -25,6 +25,18 @@ async def handle_attack(message: Message, user: User) -> None:
 
     if target_id == message.from_user.id:
         await message.reply("به خودت شلیک نکن روانی 😂")
+        return
+
+    target_user_obj = (
+        message.reply_to_message.from_user
+        if message.reply_to_message and message.reply_to_message.from_user
+        else None
+    )
+    if target_user_obj and target_user_obj.is_bot:
+        if target_user_obj.id == message.bot.id:
+            await message.reply("رو من که نمیشه شلیک کرد داداش من رفرمو میدم نه HP 😎")
+        else:
+            await message.reply("رو ربات‌ها نمیشه شلیک کرد یه آدم واقعی رو نشونه بگیر 🎯")
         return
 
     try:
@@ -119,5 +131,7 @@ async def _handle_combat_error(message: Message, error: str) -> None:
     elif error.startswith("not_enough_energy:"):
         _, current, needed = error.split(":")
         await message.reply(battle_texts.not_enough_energy(int(current), int(needed)))
+    elif "پیدا نشد" in error:
+        await message.reply("این هدف تو بازی ثبت نشده، باید حداقل یه بار با ربات تو پیوی /start زده باشه 🤔")
     else:
-        await message.reply("یه مشکلی پیش اومد دوباره امتحان کن 😅")
+        await message.reply("این حمله انجام نشد یه چیزی جلوشو گرفت، دوباره امتحان کن 😅")

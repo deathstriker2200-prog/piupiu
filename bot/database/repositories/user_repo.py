@@ -18,6 +18,15 @@ async def get_or_create_user(user_id: int, username: Optional[str], full_name: O
             await conn.execute(
                 "INSERT INTO bank_accounts (user_id, balance) VALUES (?, 0)", (user_id,)
             )
+            # سلاح شروع: مشت (همیشگی رایگان) + آب‌پاش (سلاح پیش‌فرض تجهیزشده برای بازیکن تازه)
+            await conn.execute(
+                "INSERT OR IGNORE INTO user_weapons (user_id, weapon_id, is_equipped) VALUES (?, 'fist', 0)",
+                (user_id,),
+            )
+            await conn.execute(
+                "INSERT OR IGNORE INTO user_weapons (user_id, weapon_id, is_equipped) VALUES (?, 'water_gun', 1)",
+                (user_id,),
+            )
             await conn.commit()
             cursor = await conn.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
             row = await cursor.fetchone()

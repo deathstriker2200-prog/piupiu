@@ -3,6 +3,7 @@ from aiogram.filters import CommandStart
 from aiogram.types import Message
 
 from bot.database.models.user import User
+from bot.database.repositories import settings_repo
 from bot.filters.chat_type import IsGroupChat
 from bot.utils.chat_permissions import bot_is_admin
 
@@ -10,12 +11,12 @@ router = Router(name="group_start")
 router.message.filter(IsGroupChat())
 
 
-GROUP_START_TEXT = (
-    "سلام رفقا تریاکی پیو پیو اومد وسط این گروه 💊🔫\n"
-    "از الان همه با ۱۰۰ HP شروع می‌کنن و می‌تونن به هم بپرن\n\n"
-    "برای شلیک ریپلای بزن یا منشن کن و بنویس «پیو» یا 🔫\n"
-    "برای دزدی هم بنویس «دزدی @یوزرنیم»\n\n"
-    "خرید سلاح، سگ، بانک و بقیه چیزا فقط تو پیوی منه، برو اونجا /start بزن 🛒"
+GROUP_START_TEXT_KEY = "group_start_text"
+
+DEFAULT_GROUP_START_TEXT = (
+    "بنگ بنگ اومد وسط این گروه 💊🔫\n"
+    "از الان با دستور «بنگ» میتونین به هم بپرین و پول جمع کنین\n\n"
+    "برای خرید تجهیزات و لول‌آپ و... به پی‌وی ربات برید و دستور /start رو بزنید"
 )
 
 NOT_ADMIN_WARNING = (
@@ -26,9 +27,15 @@ NOT_ADMIN_WARNING = (
 )
 
 
+async def get_group_start_text() -> str:
+    override = await settings_repo.get_override(GROUP_START_TEXT_KEY)
+    return override or DEFAULT_GROUP_START_TEXT
+
+
 @router.message(CommandStart())
 async def cmd_group_start(message: Message, user: User) -> None:
-    await message.answer(GROUP_START_TEXT)
+    text = await get_group_start_text()
+    await message.answer(text)
 
     is_admin = await bot_is_admin(message.bot, message.chat.id)
     if not is_admin:

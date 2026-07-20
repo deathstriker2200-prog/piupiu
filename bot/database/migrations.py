@@ -29,6 +29,18 @@ USER_DOGS_NEW_COLUMNS = [
     ("is_weakened", "INTEGER NOT NULL DEFAULT 0"),
 ]
 
+BUILDINGS_CATALOG_NEW_COLUMNS = [
+    ("required_level", "INTEGER NOT NULL DEFAULT 1"),
+]
+
+DOGS_CATALOG_NEW_COLUMNS = [
+    ("required_level", "INTEGER NOT NULL DEFAULT 1"),
+]
+
+EQUIPMENT_CATALOG_NEW_COLUMNS = [
+    ("required_level", "INTEGER NOT NULL DEFAULT 1"),
+]
+
 
 async def _existing_columns(conn: aiosqlite.Connection, table: str) -> set[str]:
     cursor = await conn.execute(f"PRAGMA table_info({table})")
@@ -48,4 +60,7 @@ async def _add_missing_columns(
 async def apply_column_migrations(conn: aiosqlite.Connection) -> None:
     await _add_missing_columns(conn, "users", USERS_NEW_COLUMNS)
     await _add_missing_columns(conn, "user_dogs", USER_DOGS_NEW_COLUMNS)
+    await _add_missing_columns(conn, "buildings_catalog", BUILDINGS_CATALOG_NEW_COLUMNS)
+    await _add_missing_columns(conn, "dogs_catalog", DOGS_CATALOG_NEW_COLUMNS)
+    await _add_missing_columns(conn, "equipment_catalog", EQUIPMENT_CATALOG_NEW_COLUMNS)
     await conn.commit()

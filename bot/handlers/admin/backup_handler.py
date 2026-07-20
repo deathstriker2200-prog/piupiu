@@ -19,7 +19,7 @@ class BackupStates(StatesGroup):
     waiting_restore_file = State()
 
 
-@router.message(Command("بکاپ"))
+@router.message(Command("backup"))
 async def cmd_backup(message: Message) -> None:
     try:
         backup_path = create_backup_copy()
@@ -33,7 +33,7 @@ async def cmd_backup(message: Message) -> None:
     )
 
 
-@router.message(Command("ریستور"))
+@router.message(Command("restore"))
 async def cmd_restore_prompt(message: Message, state: FSMContext) -> None:
     await message.reply(
         "⚠️ توجه\n"

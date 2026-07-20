@@ -9,9 +9,11 @@ class BuildingType:
     effect_type: str
     base_value: float
     value_growth: float
+    required_level: int
 
     @classmethod
     def from_row(cls, row) -> "BuildingType":
+        keys = row.keys()
         return cls(
             building_id=row["building_id"],
             name_fa=row["name_fa"],
@@ -19,4 +21,5 @@ class BuildingType:
             effect_type=row["effect_type"],
             base_value=row["base_value"],
             value_growth=row["value_growth"],
+            required_level=row["required_level"] if "required_level" in keys else 1,
         )

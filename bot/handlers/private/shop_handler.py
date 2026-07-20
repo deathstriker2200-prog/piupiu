@@ -6,6 +6,7 @@ from bot.database.repositories import dog_repo, weapon_repo
 from bot.keyboards.common import back_keyboard, confirm_cancel_keyboard
 from bot.keyboards.shop_kb import (
     dog_list_keyboard,
+    shop_hub_keyboard,
     weapon_detail_keyboard,
     weapon_list_keyboard,
 )
@@ -18,13 +19,23 @@ from bot.utils.formatting import format_currency
 router = Router(name="private_shop")
 
 
-@router.callback_query(lambda c: c.data == "menu:shop_weapons")
+@router.callback_query(lambda c: c.data == "menu:shop" or c.data in ("shop_cat:weapons_back", "shop_cat:dogs_back"))
+async def cb_shop_hub(callback: CallbackQuery, user: User) -> None:
+    await callback.message.edit_text(
+        "🛒 فروشگاه - یه بخش رو انتخاب کن", reply_markup=shop_hub_keyboard()
+    )
+    await callback.answer()
+
+
+@router.callback_query(lambda c: c.data == "shop_cat:weapons" or c.data == "menu:shop_weapons")
 async def cb_shop_weapons(callback: CallbackQuery, user: User) -> None:
     weapons = await weapon_repo.list_weapons()
     owned = await weapon_repo.get_user_weapons(user.user_id)
     owned_ids = {w["weapon_id"] for w in owned}
     await callback.message.edit_text(
-        "🔫 فروشگاه سلاح یکیشو انتخاب کن ببین چیه", reply_markup=weapon_list_keyboard(weapons, owned_ids)
+        "🔫 سلاح‌ها - قیمت و لول لازم کنار هرکدوم نوشته شده\n"
+        "✅ = می‌تونی بخری   🔒 = پول کافی نیست   ❌ = لولت کافی نیست   🎒 = تو کوله‌ات هست",
+        reply_markup=weapon_list_keyboard(weapons, owned_ids, user.level, user.tiriak_point, user.diamond),
     )
     await callback.answer()
 
@@ -54,11 +65,14 @@ async def cb_weapon_info(callback: CallbackQuery, user: User) -> None:
     if weapon.special_trait:
         text += f"✨ {weapon.special_trait}\n"
     if owned:
-        text += "\n✔️ این سلاح رو داری"
+        text += "\n🎒 این سلاح تو کوله‌ات هست"
+    elif user.level < weapon.required_level:
+        text += f"\n❌ لولت کافی نیست (لول تو: {user.level})"
 
-    can_afford = user.tiriak_point >= weapon.price if weapon.price_currency != "diamond" else user.diamond >= weapon.price
+    can_afford = user.diamond >= weapon.price if weapon.price_currency == "diamond" else user.tiriak_point >= weapon.price
+    can_buy = can_afford and user.level >= weapon.required_level
     await callback.message.edit_text(
-        text, reply_markup=weapon_detail_keyboard(weapon_id, owned, can_afford)
+        text, reply_markup=weapon_detail_keyboard(weapon_id, owned, can_buy)
     )
     await callback.answer()
 
@@ -87,10 +101,14 @@ async def cb_weapon_equip(callback: CallbackQuery, user: User) -> None:
     await callback.answer("🔧 تجهیز شد آماده جنگی", show_alert=True)
 
 
-@router.callback_query(lambda c: c.data == "menu:shop_dogs")
+@router.callback_query(lambda c: c.data == "shop_cat:dogs" or c.data == "menu:shop_dogs")
 async def cb_shop_dogs(callback: CallbackQuery, user: User) -> None:
     dogs = await dog_repo.list_dog_breeds()
-    await callback.message.edit_text("🐶 فروشگاه سگ یکیو انتخاب کن", reply_markup=dog_list_keyboard(dogs))
+    await callback.message.edit_text(
+        "🐶 سگ‌ها - بر اساس قدرت مرتب شدن\n"
+        "✅ = می‌تونی بخری   🔒 = پول کافی نیست   ❌ = لولت کافی نیست",
+        reply_markup=dog_list_keyboard(dogs, user.level, user.tiriak_point, user.diamond),
+    )
     await callback.answer()
 
 
@@ -109,12 +127,19 @@ async def cb_dog_info(callback: CallbackQuery, user: User) -> None:
         f"HP: {breed.hp}\n"
         f"شانس دفاع: {int(breed.defense_chance * 100)}%\n"
         f"درآمد ساعتی: {breed.income_per_hour}\n"
-        f"قیمت: {format_currency(breed.price)} {price_label}"
+        f"قیمت: {format_currency(breed.price)} {price_label}\n"
+        f"لول لازم: {breed.required_level}"
     )
+    if user.level < breed.required_level:
+        text += f"\n\n❌ لولت کافی نیست (لول تو: {user.level})"
+        await callback.message.edit_text(text, reply_markup=back_keyboard("shop_cat:dogs"))
+        await callback.answer()
+        return
+
     await callback.message.edit_text(
         text,
         reply_markup=confirm_cancel_keyboard(
-            confirm_callback=f"dog_buy:{dog_id}", cancel_callback="menu:shop_dogs",
+            confirm_callback=f"dog_buy:{dog_id}", cancel_callback="shop_cat:dogs",
             confirm_text="خرید",
         ),
     )
@@ -127,8 +152,12 @@ async def cb_dog_buy(callback: CallbackQuery, user: User) -> None:
     try:
         await purchase_dog(user.user_id, dog_id)
     except DogError as e:
-        if str(e) == "not_enough_money":
+        error = str(e)
+        if error == "not_enough_money":
             await callback.answer(not_enough_money(), show_alert=True)
+        elif error.startswith("level_required:"):
+            required = int(error.split(":", 1)[1])
+            await callback.answer(not_enough_level(required), show_alert=True)
         else:
             await callback.answer("مشکلی پیش اومد", show_alert=True)
         return

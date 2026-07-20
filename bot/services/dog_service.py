@@ -62,6 +62,9 @@ async def purchase_dog(user_id: int, dog_id: str) -> None:
     if user is None:
         raise DogError("کاربر پیدا نشد")
 
+    if user.level < breed.required_level:
+        raise DogError(f"level_required:{breed.required_level}")
+
     if breed.price_currency in ("tiriak", "both") and user.tiriak_point < breed.price:
         raise DogError("not_enough_money")
     if breed.price_currency == "diamond" and user.diamond < breed.price:

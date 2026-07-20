@@ -21,9 +21,11 @@ class AdminStates(StatesGroup):
     waiting_grant_target = State()
     waiting_grant_amount = State()
     waiting_ban_target = State()
+    waiting_group_welcome_text = State()
+    waiting_dm_welcome_text = State()
 
 
-@router.message(Command("ادمین"))
+@router.message(Command("admin"))
 async def cmd_admin(message: Message) -> None:
     await message.answer("⚙️ پنل ادمین", reply_markup=admin_main_keyboard())
 
@@ -63,6 +65,70 @@ async def cb_admin_stats(callback: CallbackQuery) -> None:
 async def cb_admin_main(callback: CallbackQuery) -> None:
     await callback.message.edit_text("⚙️ پنل ادمین", reply_markup=admin_main_keyboard())
     await callback.answer()
+
+
+@router.message(Command("setgroupwelcome"))
+async def cmd_set_group_welcome_prompt(message: Message, state: FSMContext) -> None:
+    from bot.handlers.group.start_handler import get_group_start_text
+
+    current = await get_group_start_text()
+    await message.answer(
+        f"متن خوشامد فعلی گروه اینه:\n\n{current}\n\n"
+        "متن جدید رو بفرست تا جایگزینش کنم (یا /cancel بزن برای انصراف)"
+    )
+    await state.set_state(AdminStates.waiting_group_welcome_text)
+
+
+@router.message(Command("setdmwelcome"))
+async def cmd_set_dm_welcome_prompt(message: Message, state: FSMContext) -> None:
+    from bot.handlers.private.menu_handler import get_welcome_text
+
+    current = await get_welcome_text()
+    await message.answer(
+        f"متن خوشامد فعلی پیوی اینه:\n\n{current}\n\n"
+        "متن جدید رو بفرست تا جایگزینش کنم (یا /cancel بزن برای انصراف)"
+    )
+    await state.set_state(AdminStates.waiting_dm_welcome_text)
+
+
+@router.message(AdminStates.waiting_dm_welcome_text, Command("cancel"))
+async def cancel_set_dm_welcome(message: Message, state: FSMContext) -> None:
+    await message.answer("باشه همون متن قبلی موند")
+    await state.clear()
+
+
+@router.message(AdminStates.waiting_dm_welcome_text)
+async def handle_set_dm_welcome_text(message: Message, state: FSMContext) -> None:
+    from bot.database.repositories import settings_repo
+    from bot.handlers.private.menu_handler import DM_WELCOME_TEXT_KEY
+
+    if not message.text:
+        await message.reply("فقط متن قبول می‌کنم دوباره بفرست")
+        return
+
+    await settings_repo.set_override(DM_WELCOME_TEXT_KEY, message.text)
+    await message.answer("✅ متن خوشامد پیوی آپدیت شد")
+    await state.clear()
+
+
+@router.message(AdminStates.waiting_group_welcome_text, Command("cancel"))
+async def cancel_set_group_welcome(message: Message, state: FSMContext) -> None:
+    await message.answer("باشه همون متن قبلی موند")
+    await state.clear()
+
+
+@router.message(AdminStates.waiting_group_welcome_text)
+async def handle_set_group_welcome_text(message: Message, state: FSMContext) -> None:
+    from bot.database.repositories import settings_repo
+    from bot.handlers.group.start_handler import GROUP_START_TEXT_KEY
+
+    if not message.text:
+        await message.reply("فقط متن قبول می‌کنم دوباره بفرست")
+        return
+
+    await settings_repo.set_override(GROUP_START_TEXT_KEY, message.text)
+    await message.answer("✅ متن خوشامد گروه آپدیت شد")
+    await state.clear()
 
 
 # --- ارسال همگانی ---

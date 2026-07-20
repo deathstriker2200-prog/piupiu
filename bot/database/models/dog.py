@@ -13,9 +13,11 @@ class DogBreed:
     income_per_hour: int
     price: int
     price_currency: str
+    required_level: int
 
     @classmethod
     def from_row(cls, row) -> "DogBreed":
+        keys = row.keys()
         return cls(
             dog_id=row["dog_id"],
             name_fa=row["name_fa"],
@@ -26,6 +28,7 @@ class DogBreed:
             income_per_hour=row["income_per_hour"],
             price=row["price"],
             price_currency=row["price_currency"],
+            required_level=row["required_level"] if "required_level" in keys else 1,
         )
 
 

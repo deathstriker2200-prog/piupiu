@@ -9,15 +9,11 @@ def main_menu_keyboard() -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text="🎒 کوله", callback_data="menu:inventory"),
             ],
             [
-                InlineKeyboardButton(text="🔫 فروشگاه سلاح", callback_data="menu:shop_weapons"),
-                InlineKeyboardButton(text="🐶 فروشگاه سگ", callback_data="menu:shop_dogs"),
-            ],
-            [
+                InlineKeyboardButton(text="🛒 فروشگاه", callback_data="menu:shop"),
                 InlineKeyboardButton(text="🏦 بانک", callback_data="menu:bank"),
-                InlineKeyboardButton(text="🏗 ساختمان‌ها", callback_data="menu:buildings"),
             ],
             [
-                InlineKeyboardButton(text="🦺 تجهیزات", callback_data="menu:equipment"),
+                InlineKeyboardButton(text="🏗 ساختمان‌ها", callback_data="menu:buildings"),
                 InlineKeyboardButton(text="🐕 سگ‌های من", callback_data="menu:my_dogs"),
             ],
             [
@@ -26,6 +22,7 @@ def main_menu_keyboard() -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton(text="🏆 لیدربرد", callback_data="menu:leaderboard"),
+                InlineKeyboardButton(text="➕ افزودن به گروه", callback_data="menu:add_to_group"),
             ],
         ]
     )

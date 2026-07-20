@@ -307,6 +307,36 @@ DOG_SKILLS = [
 ]
 
 
+# ================================================================
+# لول لازم برای هر ساختمان/سگ/تجهیز - این‌ها روی کاتالوگ موجود UPDATE میشن
+# چون INSERT OR IGNORE مقدار جدید رو به ردیف‌های از قبل موجود اضافه نمی‌کنه
+# ================================================================
+
+BUILDING_REQUIRED_LEVELS = {
+    "mine": 1,
+    "greenhouse": 3,
+    "company": 5,
+    "warehouse": 6,
+    "factory": 8,
+    "bank_building": 10,
+    "gang_hq": 14,
+    "military_base": 18,
+}
+
+DOG_REQUIRED_LEVELS = {
+    "stray": 1,
+    "doberman": 6,
+    "wolf": 12,
+}
+
+EQUIPMENT_REQUIRED_LEVELS = {
+    "gloves": 1,
+    "boots": 3,
+    "vest": 5,
+    "helmet": 7,
+}
+
+
 async def seed_all_v2() -> None:
     async with get_conn() as conn:
         await conn.executemany(
@@ -357,5 +387,22 @@ async def seed_all_v2() -> None:
                VALUES (?, ?, ?, ?, ?, ?)""",
             DOG_SKILLS,
         )
+
+        # لول لازم رو روی کاتالوگ‌های موجود ست کن (idempotent - همیشه همون مقدار رو می‌نویسه)
+        for building_id, req_level in BUILDING_REQUIRED_LEVELS.items():
+            await conn.execute(
+                "UPDATE buildings_catalog SET required_level = ? WHERE building_id = ?",
+                (req_level, building_id),
+            )
+        for dog_id, req_level in DOG_REQUIRED_LEVELS.items():
+            await conn.execute(
+                "UPDATE dogs_catalog SET required_level = ? WHERE dog_id = ?",
+                (req_level, dog_id),
+            )
+        for equipment_id, req_level in EQUIPMENT_REQUIRED_LEVELS.items():
+            await conn.execute(
+                "UPDATE equipment_catalog SET required_level = ? WHERE equipment_id = ?",
+                (req_level, equipment_id),
+            )
 
         await conn.commit()

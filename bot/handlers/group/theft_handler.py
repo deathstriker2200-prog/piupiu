@@ -13,7 +13,7 @@ router = Router(name="group_theft")
 router.message.filter(IsGroupChat())
 
 
-@router.message(Command("دزدی"))
+@router.message(Command("steal"))
 async def handle_theft_command(message: Message, user: User) -> None:
     target_id = await extract_target_user_id(message)
     if target_id is None:

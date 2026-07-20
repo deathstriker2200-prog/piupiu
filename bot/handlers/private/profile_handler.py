@@ -66,7 +66,6 @@ async def _build_profile_text(user: User) -> str:
 
 
 @router.message(Command("profile"))
-@router.message(Command("پروفایل"))
 async def cmd_profile(message: Message, user: User) -> None:
     text = await _build_profile_text(user)
 

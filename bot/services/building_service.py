@@ -20,6 +20,14 @@ async def upgrade_building(user_id: int, building_id: str) -> int:
 
     current = await building_repo.get_user_building(user_id, building_id)
     current_level = current["level"] if current else 0
+
+    if current_level == 0:
+        user = await user_repo.get_user(user_id)
+        if user is None:
+            raise BuildingError("user_not_found")
+        if user.level < building_type.required_level:
+            raise BuildingError(f"level_required:{building_type.required_level}")
+
     cost = BUILDING_UPGRADE_BASE_COST * (current_level + 1)
 
     user = await user_repo.get_user(user_id)

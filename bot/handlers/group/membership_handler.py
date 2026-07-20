@@ -1,7 +1,7 @@
 from aiogram import Bot, Router
 from aiogram.types import ChatMemberUpdated
 
-from bot.handlers.group.start_handler import GROUP_START_TEXT, NOT_ADMIN_WARNING
+from bot.handlers.group.start_handler import NOT_ADMIN_WARNING, get_group_start_text
 
 router = Router(name="group_membership")
 
@@ -21,7 +21,8 @@ async def on_bot_membership_changed(event: ChatMemberUpdated, bot: Bot) -> None:
 
     # ربات تازه به گروه اضافه شده (از left/kicked به member/administrator)
     if old_status in ("left", "kicked") and new_status in ("member", "administrator"):
-        await bot.send_message(event.chat.id, GROUP_START_TEXT)
+        text = await get_group_start_text()
+        await bot.send_message(event.chat.id, text)
         if new_status != "administrator":
             await bot.send_message(event.chat.id, NOT_ADMIN_WARNING)
         return

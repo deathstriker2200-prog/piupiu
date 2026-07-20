@@ -11,7 +11,7 @@ router = Router(name="achievement_commands")
 TIER_LABELS = {"bronze": "🥉", "silver": "🥈", "gold": "🥇", "platinum": "💎"}
 
 
-@router.message(Command("دستاورد"))
+@router.message(Command("achievements"))
 async def cmd_achievements(message: Message, user: User) -> None:
     all_ach = await get_user_achievements(user.user_id)
     summary = await get_achievement_summary(user.user_id)
@@ -41,7 +41,7 @@ async def cmd_achievements(message: Message, user: User) -> None:
     await message.answer("\n".join(lines))
 
 
-@router.message(Command("نشان"))
+@router.message(Command("badges"))
 async def cmd_badges(message: Message, user: User) -> None:
     badges = await get_user_badges(user.user_id)
 

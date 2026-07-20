@@ -9,7 +9,7 @@ from bot.utils.formatting import format_currency
 router = Router(name="daily_login_commands")
 
 
-@router.message(Command("روزانه"))
+@router.message(Command("daily"))
 async def cmd_daily_login(message: Message, user: User) -> None:
     try:
         result = await claim_daily(user.user_id)
