@@ -70,6 +70,14 @@ CREATE TABLE IF NOT EXISTS attack_cooldowns (
     PRIMARY KEY (user_id, weapon_id)
 );
 
+-- کولدان خرید دوباره مهمات یک سلاح بعد از اتمام کامل مهمات (یک دقیقه صبر)
+CREATE TABLE IF NOT EXISTS ammo_cooldowns (
+    user_id         INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    weapon_id       TEXT NOT NULL,
+    available_at    TEXT NOT NULL,        -- ISO timestamp
+    PRIMARY KEY (user_id, weapon_id)
+);
+
 -- سگ‌ها (کاتالوگ ثابت)
 CREATE TABLE IF NOT EXISTS dogs_catalog (
     dog_id          TEXT PRIMARY KEY,     -- 'stray', 'doberman', 'wolf'

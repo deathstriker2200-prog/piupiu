@@ -93,6 +93,29 @@ async def set_ammo(user_id: int, weapon_id: str, ammo: int) -> None:
         await conn.commit()
 
 
+async def get_ammo_cooldown(user_id: int, weapon_id: str) -> Optional[str]:
+    async with get_conn() as conn:
+        cursor = await conn.execute(
+            "SELECT available_at FROM ammo_cooldowns WHERE user_id = ? AND weapon_id = ?",
+            (user_id, weapon_id),
+        )
+        row = await cursor.fetchone()
+        if not row:
+            return None
+        return row["available_at"]
+
+
+async def set_ammo_cooldown(user_id: int, weapon_id: str, available_at_iso: str) -> None:
+    async with get_conn() as conn:
+        await conn.execute(
+            """INSERT INTO ammo_cooldowns (user_id, weapon_id, available_at)
+               VALUES (?, ?, ?)
+               ON CONFLICT(user_id, weapon_id) DO UPDATE SET available_at = excluded.available_at""",
+            (user_id, weapon_id, available_at_iso),
+        )
+        await conn.commit()
+
+
 async def get_cooldown(user_id: int, weapon_id: str) -> Optional[str]:
     async with get_conn() as conn:
         cursor = await conn.execute(

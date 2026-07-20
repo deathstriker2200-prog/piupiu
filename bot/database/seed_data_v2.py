@@ -138,33 +138,6 @@ def _lines_for(weapon_id: str, lines: list[str]) -> list[tuple]:
 
 WEAPON_ATTACK_LINES: list[tuple] = []
 
-WEAPON_ATTACK_LINES += _lines_for("fist", [
-    "{attacker} یه مشت درست حسابی زد تو فک {target}",
-    "{attacker} با مشت خالی {target} رو نقش زمین کرد",
-    "مشت {attacker} مثل پتک خورد تو صورت {target}",
-    "{attacker} دستشو گرم کرد و زد تو {target}",
-    "{target} از مشت {attacker} یهو گیج شد",
-    "{attacker} یه آپرکات حساب‌شده زد تو {target}",
-    "صدای برخورد مشت {attacker} تو کل کوچه پیچید",
-    "{attacker} با دست خالی نشون داد کی رئیسه",
-    "مشت {attacker} رو صورت {target} داغ شد",
-    "{attacker} یه ضربه خشک زد که {target} تلو تلو خورد",
-    "{target} فکر نمی‌کرد مشت خالی {attacker} انقدر بگیره",
-])
-
-WEAPON_ATTACK_LINES += _lines_for("brass_knuckle", [
-    "{attacker} با پنجه بکس زد تو فک {target}",
-    "پنجه بکس {attacker} صدای ترسناکی داد رو صورت {target}",
-    "{attacker} انگشتاشو محکم کرد و کوبید تو {target}",
-    "{target} از ضربه فلزی {attacker} چرخید",
-    "{attacker} یه هوک آهنی زد که {target} داغون شد",
-    "پنجه بکس {attacker} رو گونه {target} فرود اومد",
-    "{attacker} بدون تعارف با آهن زد تو {target}",
-    "{target} صدای فلز رو رو استخونش حس کرد",
-    "{attacker} با یه حرکت سریع پنجه بکسو کوبید تو {target}",
-    "ضربه سنگین {attacker} {target} رو عقب پرت کرد",
-])
-
 WEAPON_ATTACK_LINES += _lines_for("knife", [
     "{attacker} چاقو رو کشید و زد تو بازوی {target}",
     "{target} از تیزی چاقوی {attacker} جیغ کشید",
@@ -176,32 +149,6 @@ WEAPON_ATTACK_LINES += _lines_for("knife", [
     "صدای پارگی لباس {target} زیر چاقوی {attacker} پیچید",
     "{attacker} یه ضربه دقیق با چاقو حواله {target} کرد",
     "چاقوی {attacker} این بار هم کار خودشو کرد",
-])
-
-WEAPON_ATTACK_LINES += _lines_for("axe", [
-    "{attacker} تبر رو بالا برد و کوبید رو {target}",
-    "{target} از سنگینی تبر {attacker} زانو زد",
-    "تبر {attacker} با صدای بلند خورد به {target}",
-    "{attacker} با تمام قدرت تبرشو تو هوا چرخوند سمت {target}",
-    "{target} جا خورد از ضربه سنگین تبر {attacker}",
-    "{attacker} تبرشو کشید عقب و زد تو {target}",
-    "ضربه تبر {attacker} {target} رو نقش زمین کرد",
-    "{attacker} مثل هیزم‌شکن زد تو {target}",
-    "{target} صدای شکافتن هوا رو قبل ضربه تبر شنید",
-    "تبر {attacker} این دفعه هم امون نداد",
-])
-
-WEAPON_ATTACK_LINES += _lines_for("sword", [
-    "{attacker} شمشیر رو کشید و ضربه زد به {target}",
-    "{target} از برق شمشیر {attacker} جا خورد",
-    "شمشیر {attacker} یه خط بلند رو بدن {target} انداخت",
-    "{attacker} با یه حرکت نمایشی شمشیر زد",
-    "{target} نتونست جلوی شمشیر {attacker} دووم بیاره",
-    "{attacker} شمشیرشو چرخوند و فرود آورد رو {target}",
-    "صدای فلز شمشیر {attacker} تو هوا پیچید",
-    "{attacker} مثل سامورایی زد تو {target}",
-    "{target} از ضربه دقیق شمشیر {attacker} لرزید",
-    "شمشیر {attacker} کارشو تمیز انجام داد",
 ])
 
 WEAPON_ATTACK_LINES += _lines_for("colt", [
@@ -245,8 +192,7 @@ WEAPON_ATTACK_LINES += _lines_for("sniper", [
 
 # برای بقیه سلاح‌ها یه ست عمومی متنوع می‌سازیم که با اسم و ایموجی خودشون پر میشه
 GENERIC_WEAPON_IDS = [
-    "hammer", "saw", "katana", "deagle", "uzi", "m4", "shotgun", "minigun",
-    "rpg", "launcher", "water_gun", "cucumber", "slipper", "spoon", "broom", "brick",
+    "shotgun", "m4", "rpg", "water_gun",
 ]
 
 GENERIC_TEMPLATES = [
@@ -338,13 +284,22 @@ EQUIPMENT_REQUIRED_LEVELS = {
 
 
 async def seed_all_v2() -> None:
+    # سیستم الماس کاملاً حذف شده؛ همیشه reward_diamond رو صفر می‌کنیم و به‌جاش
+    # مقدارش رو به‌صورت تریاک‌پوینت اضافه به reward_tiriak اضافه می‌کنیم تا جایزه‌ی
+    # کلی کم نشه (هر واحد الماس قبلی معادل ۱۰۰ تریاک‌پوینت حساب میشه)
+    achievements_no_diamond = [
+        (aid, icon, title, desc, goal_type, goal_amount, reward_xp,
+         reward_tiriak + reward_diamond * 100, 0, tier)
+        for (aid, icon, title, desc, goal_type, goal_amount,
+             reward_xp, reward_tiriak, reward_diamond, tier) in ACHIEVEMENTS
+    ]
     async with get_conn() as conn:
         await conn.executemany(
             """INSERT OR IGNORE INTO achievements_catalog
                (achievement_id, icon, title, description, goal_type, goal_amount,
                 reward_xp, reward_tiriak, reward_diamond, tier)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            ACHIEVEMENTS,
+            achievements_no_diamond,
         )
         await conn.executemany(
             """INSERT OR IGNORE INTO badges_catalog (badge_id, icon, title, description)

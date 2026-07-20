@@ -9,7 +9,7 @@
 """
 
 from aiogram import Bot
-from aiogram.types import BotCommand, BotCommandScopeChat, BotCommandScopeDefault
+from aiogram.types import BotCommand, BotCommandScopeAllGroupChats, BotCommandScopeChat, BotCommandScopeDefault
 
 from bot.config.settings import settings
 
@@ -23,6 +23,12 @@ DEFAULT_COMMANDS = [
     BotCommand(command="menu", description="بازکردن دوباره منوی اصلی (پیوی)"),
 ]
 
+GROUP_COMMANDS = [
+    BotCommand(command="shop", description="نمایش فروشگاه سلاح مستقیم تو گروه"),
+    BotCommand(command="profile", description="نمایش پروفایل مستقیم تو گروه"),
+    BotCommand(command="leaderboard", description="نمایش لیدربرد مستقیم تو گروه"),
+]
+
 ADMIN_EXTRA_COMMANDS = [
     BotCommand(command="admin", description="پنل مدیریت ربات"),
     BotCommand(command="backup", description="گرفتن فایل بک‌آپ دیتابیس"),
@@ -34,6 +40,7 @@ ADMIN_EXTRA_COMMANDS = [
 
 async def setup_bot_commands(bot: Bot) -> None:
     await bot.set_my_commands(DEFAULT_COMMANDS, scope=BotCommandScopeDefault())
+    await bot.set_my_commands(GROUP_COMMANDS, scope=BotCommandScopeAllGroupChats())
 
     for admin_id in settings.admin_ids:
         try:

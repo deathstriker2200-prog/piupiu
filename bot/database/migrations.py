@@ -64,3 +64,38 @@ async def apply_column_migrations(conn: aiosqlite.Connection) -> None:
     await _add_missing_columns(conn, "dogs_catalog", DOGS_CATALOG_NEW_COLUMNS)
     await _add_missing_columns(conn, "equipment_catalog", EQUIPMENT_CATALOG_NEW_COLUMNS)
     await conn.commit()
+    await _migrate_hp_to_200(conn)
+
+
+async def _migrate_hp_to_200(conn: aiosqlite.Connection) -> None:
+    """
+    HP پایه بازی از 100 به 200 تغییر کرد
+    کاربرهای قدیمی که هنوز max_hp قدیمی (بر پایه 100) دارن رو آپدیت می‌کنیم:
+    - هر کاربری که max_hp کمتر از 200 داره (یعنی هنوز migration نخورده)، بر اساس لولش
+      max_hp جدید (200 + (level-1)*5) رو می‌گیره
+    - hp فعلیش هم به همون نسبت (درصد قبلی از max_hp قبلی) به max_hp جدید نگاشت میشه
+      تا کسی که نصفه HP داشته ناگهان full/خالی نشه
+    این migration فقط یک‌بار برای هر کاربر لازمه؛ چون شرط بر مبنای max_hp < 200 + رشد لوله،
+      دوباره اجرا شدنش برای کاربرهای already-migrated بی‌اثره (idempotent)
+    """
+    HP_GAIN_PER_LEVEL = 5
+    NEW_BASE_HP = 200
+
+    cursor = await conn.execute("SELECT user_id, hp, max_hp, level FROM users")
+    rows = await cursor.fetchall()
+
+    for row in rows:
+        old_max_hp = row["max_hp"]
+        level = row["level"] or 1
+        expected_new_max_hp = NEW_BASE_HP + (level - 1) * HP_GAIN_PER_LEVEL
+
+        if old_max_hp is not None and old_max_hp < expected_new_max_hp:
+            old_hp = row["hp"] or 0
+            ratio = (old_hp / old_max_hp) if old_max_hp > 0 else 1.0
+            new_hp = max(0, min(expected_new_max_hp, int(expected_new_max_hp * ratio)))
+            await conn.execute(
+                "UPDATE users SET hp = ?, max_hp = ? WHERE user_id = ?",
+                (new_hp, expected_new_max_hp, row["user_id"]),
+            )
+
+    await conn.commit()
