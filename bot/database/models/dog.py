@@ -42,9 +42,13 @@ class UserDog:
     dog_xp: int
     last_fed_at: Optional[str]
     acquired_at: str
+    attack_damage_min: int = 20
+    attack_damage_max: int = 30
+    attack_cooldown_until: Optional[str] = None
 
     @classmethod
     def from_row(cls, row) -> "UserDog":
+        keys = row.keys()
         return cls(
             id=row["id"],
             user_id=row["user_id"],
@@ -54,4 +58,7 @@ class UserDog:
             dog_xp=row["dog_xp"],
             last_fed_at=row["last_fed_at"],
             acquired_at=row["acquired_at"],
+            attack_damage_min=row["attack_damage_min"] if "attack_damage_min" in keys else 20,
+            attack_damage_max=row["attack_damage_max"] if "attack_damage_max" in keys else 30,
+            attack_cooldown_until=row["attack_cooldown_until"] if "attack_cooldown_until" in keys else None,
         )

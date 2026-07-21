@@ -27,10 +27,22 @@ USER_DOGS_NEW_COLUMNS = [
     ("loyalty", "INTEGER NOT NULL DEFAULT 50"),
     ("last_stats_update_at", "TEXT"),
     ("is_weakened", "INTEGER NOT NULL DEFAULT 0"),
+    ("dog_name", "TEXT"),
+    ("attack_damage_min", "INTEGER NOT NULL DEFAULT 20"),
+    ("attack_damage_max", "INTEGER NOT NULL DEFAULT 30"),
+    ("attack_cooldown_until", "TEXT"),
+]
+
+USER_BUILDINGS_NEW_COLUMNS = [
+    ("accumulated_income", "REAL NOT NULL DEFAULT 0"),
 ]
 
 BUILDINGS_CATALOG_NEW_COLUMNS = [
     ("required_level", "INTEGER NOT NULL DEFAULT 1"),
+    ("is_active", "INTEGER NOT NULL DEFAULT 1"),
+    ("max_level", "INTEGER NOT NULL DEFAULT 10"),
+    ("storage_cap_base", "REAL NOT NULL DEFAULT 2000"),
+    ("storage_cap_growth", "REAL NOT NULL DEFAULT 1.3"),
 ]
 
 DOGS_CATALOG_NEW_COLUMNS = [
@@ -39,6 +51,8 @@ DOGS_CATALOG_NEW_COLUMNS = [
 
 EQUIPMENT_CATALOG_NEW_COLUMNS = [
     ("required_level", "INTEGER NOT NULL DEFAULT 1"),
+    ("defense_percent_base", "REAL NOT NULL DEFAULT 3.0"),
+    ("defense_percent_growth", "REAL NOT NULL DEFAULT 1.2"),
 ]
 
 
@@ -61,6 +75,7 @@ async def apply_column_migrations(conn: aiosqlite.Connection) -> None:
     await _add_missing_columns(conn, "users", USERS_NEW_COLUMNS)
     await _add_missing_columns(conn, "user_dogs", USER_DOGS_NEW_COLUMNS)
     await _add_missing_columns(conn, "buildings_catalog", BUILDINGS_CATALOG_NEW_COLUMNS)
+    await _add_missing_columns(conn, "user_buildings", USER_BUILDINGS_NEW_COLUMNS)
     await _add_missing_columns(conn, "dogs_catalog", DOGS_CATALOG_NEW_COLUMNS)
     await _add_missing_columns(conn, "equipment_catalog", EQUIPMENT_CATALOG_NEW_COLUMNS)
     await conn.commit()

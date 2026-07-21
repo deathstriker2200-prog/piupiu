@@ -6,7 +6,7 @@ from bot.database.models.building import BuildingType
 
 async def list_building_types() -> list[BuildingType]:
     async with get_conn() as conn:
-        cursor = await conn.execute("SELECT * FROM buildings_catalog")
+        cursor = await conn.execute("SELECT * FROM buildings_catalog WHERE is_active = 1")
         rows = await cursor.fetchall()
         return [BuildingType.from_row(r) for r in rows]
 
@@ -59,6 +59,30 @@ async def mark_collected(user_id: int, building_id: str, collected_at_iso: str) 
     async with get_conn() as conn:
         await conn.execute(
             "UPDATE user_buildings SET last_collected_at = ? WHERE user_id = ? AND building_id = ?",
+            (collected_at_iso, user_id, building_id),
+        )
+        await conn.commit()
+
+
+async def set_accumulated_income(
+    user_id: int, building_id: str, accumulated: float, calculated_at_iso: str
+) -> None:
+    async with get_conn() as conn:
+        await conn.execute(
+            """UPDATE user_buildings
+               SET accumulated_income = ?, last_collected_at = ?
+               WHERE user_id = ? AND building_id = ?""",
+            (accumulated, calculated_at_iso, user_id, building_id),
+        )
+        await conn.commit()
+
+
+async def reset_accumulated_income(user_id: int, building_id: str, collected_at_iso: str) -> None:
+    async with get_conn() as conn:
+        await conn.execute(
+            """UPDATE user_buildings
+               SET accumulated_income = 0, last_collected_at = ?
+               WHERE user_id = ? AND building_id = ?""",
             (collected_at_iso, user_id, building_id),
         )
         await conn.commit()

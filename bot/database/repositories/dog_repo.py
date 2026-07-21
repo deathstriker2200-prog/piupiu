@@ -59,6 +59,34 @@ async def get_user_dog_by_id(user_dog_id: int) -> Optional[UserDog]:
         return UserDog.from_row(row) if row else None
 
 
+async def get_user_dog_by_nickname(user_id: int, nickname: str) -> Optional[UserDog]:
+    async with get_conn() as conn:
+        cursor = await conn.execute(
+            "SELECT * FROM user_dogs WHERE user_id = ? AND nickname = ? COLLATE NOCASE",
+            (user_id, nickname),
+        )
+        row = await cursor.fetchone()
+        return UserDog.from_row(row) if row else None
+
+
+async def set_dog_attack_damage(user_dog_id: int, dmg_min: int, dmg_max: int) -> None:
+    async with get_conn() as conn:
+        await conn.execute(
+            "UPDATE user_dogs SET attack_damage_min = ?, attack_damage_max = ? WHERE id = ?",
+            (dmg_min, dmg_max, user_dog_id),
+        )
+        await conn.commit()
+
+
+async def set_dog_attack_cooldown(user_dog_id: int, cooldown_until_iso: str) -> None:
+    async with get_conn() as conn:
+        await conn.execute(
+            "UPDATE user_dogs SET attack_cooldown_until = ? WHERE id = ?",
+            (cooldown_until_iso, user_dog_id),
+        )
+        await conn.commit()
+
+
 # --- غذا ---
 
 async def list_food() -> list[dict]:

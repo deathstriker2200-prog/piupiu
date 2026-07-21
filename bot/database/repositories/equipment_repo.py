@@ -11,7 +11,7 @@ async def list_equipment_catalog() -> list[dict]:
 async def get_user_equipment(user_id: int) -> list[dict]:
     async with get_conn() as conn:
         cursor = await conn.execute(
-            """SELECT ue.*, ec.name_fa, ec.emoji, ec.slot
+            """SELECT ue.*, ec.name_fa, ec.emoji, ec.slot, ec.defense_percent_base, ec.defense_percent_growth
                FROM user_equipment ue JOIN equipment_catalog ec ON ue.equipment_id = ec.equipment_id
                WHERE ue.user_id = ?""",
             (user_id,),
@@ -29,3 +29,19 @@ async def upgrade_equipment(user_id: int, equipment_id: str, new_level: int) -> 
             (user_id, equipment_id, new_level),
         )
         await conn.commit()
+
+
+async def get_total_defense_percent(user_id: int, cap_percent: float = 60.0) -> float:
+    """
+    مجموع درصد کاهش دمیج از تمام تجهیزات تجهیزشده رو حساب می‌کنه (جمع خطی، با یه سقف کلی)
+    """
+    rows = await get_user_equipment(user_id)
+    total = 0.0
+    for row in rows:
+        level = row["level"]
+        if level <= 0:
+            continue
+        base = row.get("defense_percent_base", 3.0)
+        growth = row.get("defense_percent_growth", 1.2)
+        total += base * (growth ** (level - 1))
+    return min(total, cap_percent)

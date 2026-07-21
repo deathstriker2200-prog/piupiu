@@ -71,7 +71,7 @@ _add_tier_set("craft_items", "🛠", "صنعتگر زیرزمینی", "این ت
               [1, 10, 50, 200], (15, 30, 0))
 _add_tier_set("boss_participate", "👹", "شکارچی غول", "این تعداد بار تو Boss Event شرکت کن:", "boss_participations",
               [1, 5, 20, 50], (0, 100, 1))
-_add_tier_set("combo_reach", "⚡", "استاد کمبو", "به این عدد Combo برس:", "max_combo_reached",
+_add_tier_set("combo_reach", "⚡", "استاد کمبو", "به این عدد کمبو برس:", "max_combo_reached",
               [3, 5, 10, 20], (10, 40, 0))
 _add_tier_set("critical_land", "🎯", "نشانه‌گیر", "این تعداد Critical/Headshot بزن:", "criticals_landed",
               [5, 30, 100, 400], (20, 50, 0))
@@ -225,10 +225,7 @@ async def _weapon_display_name(conn, weapon_id: str) -> str:
 BUILDING_SKILL_BRANCHES = ["speed", "capacity", "quality", "diamond_chance"]
 
 BUILDING_SKILL_TREE: list[tuple] = []
-for building_id in [
-    "mine", "company", "factory", "greenhouse", "bank_building",
-    "warehouse", "gang_hq", "military_base",
-]:
+for building_id in ["mine", "company", "factory", "greenhouse"]:
     for branch in BUILDING_SKILL_BRANCHES:
         effect_per_level = {
             "speed": 0.05,
@@ -254,33 +251,18 @@ DOG_SKILLS = [
 
 
 # ================================================================
-# لول لازم برای هر ساختمان/سگ/تجهیز - این‌ها روی کاتالوگ موجود UPDATE میشن
+# لول لازم برای سگ/تجهیز - این‌ها روی کاتالوگ موجود UPDATE میشن
 # چون INSERT OR IGNORE مقدار جدید رو به ردیف‌های از قبل موجود اضافه نمی‌کنه
+# نکته: required_level ساختمان‌ها دیگه اینجا ست نمیشه، چون seed_data.py با کاتالوگ
+# جدید ۴تایی (لول ۲/۴/۶/۸) این مقدار رو مستقیم و به‌روز ست می‌کنه
 # ================================================================
-
-BUILDING_REQUIRED_LEVELS = {
-    "mine": 1,
-    "greenhouse": 3,
-    "company": 5,
-    "warehouse": 6,
-    "factory": 8,
-    "bank_building": 10,
-    "gang_hq": 14,
-    "military_base": 18,
-}
 
 DOG_REQUIRED_LEVELS = {
     "stray": 1,
     "doberman": 6,
     "wolf": 12,
 }
-
-EQUIPMENT_REQUIRED_LEVELS = {
-    "gloves": 1,
-    "boots": 3,
-    "vest": 5,
-    "helmet": 7,
-}
+# نکته: required_level تجهیزات دیگه اینجا ست نمیشه، seed_data.py مقدار درستشو ست می‌کنه
 
 
 async def seed_all_v2() -> None:
@@ -343,21 +325,12 @@ async def seed_all_v2() -> None:
             DOG_SKILLS,
         )
 
-        # لول لازم رو روی کاتالوگ‌های موجود ست کن (idempotent - همیشه همون مقدار رو می‌نویسه)
-        for building_id, req_level in BUILDING_REQUIRED_LEVELS.items():
-            await conn.execute(
-                "UPDATE buildings_catalog SET required_level = ? WHERE building_id = ?",
-                (req_level, building_id),
-            )
+        # لول لازم برای ساختمان‌ها دیگه اینجا ست نمیشه (seed_data.py با کاتالوگ جدید ۴تایی خودش این کارو می‌کنه)
         for dog_id, req_level in DOG_REQUIRED_LEVELS.items():
             await conn.execute(
                 "UPDATE dogs_catalog SET required_level = ? WHERE dog_id = ?",
                 (req_level, dog_id),
             )
-        for equipment_id, req_level in EQUIPMENT_REQUIRED_LEVELS.items():
-            await conn.execute(
-                "UPDATE equipment_catalog SET required_level = ? WHERE equipment_id = ?",
-                (req_level, equipment_id),
-            )
+        # required_level تجهیزات دیگه اینجا ست نمیشه (seed_data.py با مقادیر جدید خودش این کارو می‌کنه)
 
         await conn.commit()

@@ -9,15 +9,16 @@ from bot.database.db import get_conn
 WEAPONS = [
     # weapon_id, name_fa, emoji, category, damage(base), cooldown_sec, price, currency,
     # req_level, needs_ammo, mag, reload, special
-    # damage پایه طوری تنظیم شده که با ضرب رندوم 0.85-1.15 داخل combat_service تقریبا همون بازه دمیج بشه
-    ("water_gun", "تفنگ آب‌پاش", "💦", "fun", 13, 1, 0, "tiriak", 1, 0, None, None, "سلاح پیش‌فرض رایگان، کمی قوی‌تر شده تا تازه‌کارها ضعیف نباشن"),
-    ("knife", "چاقو", "🔪", "melee", 16, 3, 450, "tiriak", 2, 0, None, None, None),
-    ("colt", "کلت", "🔫", "firearm", 22, 5, 1500, "tiriak", 4, 0, None, None, None),
-    ("shotgun", "شاتگان", "💥", "firearm", 39, 8, 4000, "tiriak", 7, 0, None, None, "دمیج بالا از فاصله نزدیک"),
-    ("ak47", "کلاشنیکف", "🪖", "firearm", 55, 6, 8000, "tiriak", 10, 1, 30, 20, None),
-    ("m4", "ام۴", "🎯", "firearm", 65, 5, 12000, "tiriak", 13, 1, 30, 18, None),
-    ("sniper", "اسنایپر", "🎯", "firearm", 100, 15, 20000, "tiriak", 17, 1, 5, 30, "همیشه کریتیکال"),
-    ("rpg", "آرپی‌جی", "💣", "firearm", 180, 30, 35000, "tiriak", 22, 1, 1, 45, "قدرتمندترین سلاح بازی"),
+    # damage پایه طوری تنظیم شده که با ضرب رندوم 0.85-1.15 داخل combat_service دقیقا بازه دمیج درخواستی بشه
+    # کولدان همه سلاح‌ها >= کولدان آب‌پاش (15 ثانیه) هست و هرچی سلاح قوی‌تر/گرون‌تر باشه، جایزه هر ثانیه (تریاک‌پوینت/ایکس‌پی) بیشتر میشه
+    ("water_gun", "تفنگ آب‌پاش", "💦", "fun", 13, 15, 0, "tiriak", 1, 0, None, None, "سلاح پیش‌فرض رایگان، کمی قوی‌تر شده تا تازه‌کارها ضعیف نباشن"),
+    ("knife", "چاقو", "🔪", "melee", 16, 17, 450, "tiriak", 2, 0, None, None, None),
+    ("colt", "کلت", "🔫", "firearm", 22, 19, 1500, "tiriak", 4, 0, None, None, None),
+    ("shotgun", "شاتگان", "💥", "firearm", 39, 22, 4000, "tiriak", 7, 0, None, None, "دمیج بالا از فاصله نزدیک"),
+    ("ak47", "کلاشنیکف", "🪖", "firearm", 55, 20, 8000, "tiriak", 10, 1, 30, 20, None),
+    ("m4", "ام۴", "🎯", "firearm", 65, 18, 12000, "tiriak", 13, 1, 30, 18, None),
+    ("sniper", "اسنایپر", "🎯", "firearm", 100, 28, 20000, "tiriak", 17, 1, 5, 30, "همیشه کریتیکال"),
+    ("rpg", "آرپی‌جی", "💣", "firearm", 180, 35, 35000, "tiriak", 22, 1, 1, 45, "قدرتمندترین سلاح بازی"),
 ]
 
 OLD_WEAPON_IDS_TO_REMOVE = [
@@ -41,23 +42,24 @@ FOOD = [
 ]
 
 EQUIPMENT = [
-    # equipment_id, name_fa, emoji, slot
-    ("vest", "جلیقه", "🦺", "vest"),
-    ("helmet", "کلاه", "⛑", "helmet"),
-    ("boots", "چکمه", "🥾", "boots"),
-    ("gloves", "دستکش", "🧤", "gloves"),
+    # equipment_id, name_fa, emoji, slot, defense_percent_base(لول 1), defense_percent_growth, required_level
+    ("vest", "جلیقه ضدگلوله", "🦺", "vest", 4.0, 1.25, 3),
+    ("helmet", "کلاه ایمنی", "⛑", "helmet", 3.0, 1.25, 3),
+    ("boots", "چکمه رزمی", "🥾", "boots", 2.0, 1.20, 5),
+    ("gloves", "دستکش تاکتیکی", "🧤", "gloves", 2.0, 1.20, 5),
 ]
 
 BUILDINGS = [
-    # building_id, name_fa, emoji, effect_type, base_value, value_growth
-    ("mine", "معدن", "⛏", "income", 50, 1.15),
-    ("company", "شرکت", "🏢", "fixed_income", 100, 1.10),
-    ("factory", "کارخانه", "🏭", "income", 80, 1.12),
-    ("greenhouse", "گلخانه", "🌿", "income", 40, 1.10),
-    ("bank_building", "بانک", "💰", "bank_interest", 0.01, 1.05),
-    ("warehouse", "انبار", "🏚", "storage_capacity", 500, 1.10),
-    ("gang_hq", "گروهک", "🏴", "gang_damage", 0.02, 1.08),
-    ("military_base", "پایگاه نظامی", "🎯", "combat_power", 0.03, 1.08),
+    # building_id, name_fa, emoji, effect_type, base_value(income/hour at level 1), value_growth,
+    # required_level(unlock لول ساخت اولیه), is_active, max_level, storage_cap_base(TP), storage_cap_growth
+    ("mine", "معدن", "⛏", "income", 200, 1.35, 2, 1, 10, 2000, 1.35),
+    ("factory", "کارخانه", "🏭", "income", 350, 1.35, 4, 1, 10, 3200, 1.35),
+    ("greenhouse", "گلخانه", "🌿", "income", 550, 1.35, 6, 1, 10, 5000, 1.35),
+    ("company", "شرکت", "🏢", "income", 900, 1.35, 8, 1, 10, 8000, 1.35),
+]
+
+OLD_BUILDING_IDS_TO_REMOVE = [
+    "bank_building", "warehouse", "gang_hq", "military_base",
 ]
 
 
@@ -92,14 +94,24 @@ async def seed_all() -> None:
             FOOD,
         )
         await conn.executemany(
-            """INSERT OR IGNORE INTO equipment_catalog (equipment_id, name_fa, emoji, slot)
-               VALUES (?, ?, ?, ?)""",
+            """INSERT OR REPLACE INTO equipment_catalog
+               (equipment_id, name_fa, emoji, slot, defense_percent_base, defense_percent_growth, required_level)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
             EQUIPMENT,
         )
         await conn.executemany(
-            """INSERT OR IGNORE INTO buildings_catalog
-               (building_id, name_fa, emoji, effect_type, base_value, value_growth)
-               VALUES (?, ?, ?, ?, ?, ?)""",
+            """INSERT OR REPLACE INTO buildings_catalog
+               (building_id, name_fa, emoji, effect_type, base_value, value_growth,
+                required_level, is_active, max_level, storage_cap_base, storage_cap_growth)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             BUILDINGS,
         )
+        # ساختمان‌های قدیمی که دیگه تو کاتالوگ ۴تایی جدید نیستن رو غیرفعال می‌کنیم
+        # (حذف نمی‌کنیم چون ممکنه کاربرهای قدیمی توی user_buildings ردیف داشته باشن و FK بشکنه)
+        if OLD_BUILDING_IDS_TO_REMOVE:
+            placeholders = ",".join("?" for _ in OLD_BUILDING_IDS_TO_REMOVE)
+            await conn.execute(
+                f"UPDATE buildings_catalog SET is_active = 0 WHERE building_id IN ({placeholders})",
+                OLD_BUILDING_IDS_TO_REMOVE,
+            )
         await conn.commit()
