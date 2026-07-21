@@ -25,7 +25,7 @@ def not_enough_level(required_level: int) -> str:
 def quest_completed(title: str, reward_xp: int, reward_tiriak: int, reward_diamond: int) -> str:
     rewards = []
     if reward_xp:
-        rewards.append(f"{reward_xp} XP")
+        rewards.append(f"{reward_xp} ایکس‌پی")
     if reward_tiriak:
         rewards.append(f"{reward_tiriak} تریاک‌پوینت")
     if reward_diamond:

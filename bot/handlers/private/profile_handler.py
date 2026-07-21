@@ -41,7 +41,7 @@ async def _build_profile_text(user: User) -> str:
         f"🏴 تیم: {team_line}\n"
         f"🔫 سلاح تجهیز شده: {weapon_line}\n\n"
         f"❤️ HP: {hp_bar(user.hp, user.max_hp)}  {user.hp}/{user.max_hp}\n"
-        f"🌟 لول {user.level}  —  XP {user.xp}/{xp_needed}\n"
+        f"🌟 لول {user.level}  —  ایکس‌پی {user.xp}/{xp_needed}\n"
         f"🏆 رتبه: {stats['rank']} از {stats['total_players']} بازیکن\n\n"
         f"━━━━━━ 💰 دارایی ━━━━━━\n"
         f"💊 تریاک‌پوینت: {format_currency(user.tiriak_point)}\n"

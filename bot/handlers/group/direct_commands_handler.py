@@ -34,7 +34,7 @@ async def group_cmd_profile(message: Message, user: User) -> None:
 
 BOARD_LABELS = {
     "level": "🌟 بیشترین لول",
-    "xp": "✨ بیشترین XP",
+    "xp": "✨ بیشترین ایکس‌پی",
     "tiriak_point": "💊 بیشترین تریاک‌پوینت",
     "kills": "💀 بیشترین کشته",
 }

@@ -4,8 +4,9 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 from bot.database.models.user import User
 from bot.database.repositories import dog_repo
 from bot.keyboards.common import back_keyboard
-from bot.services.dog_service import DogError, feed_dog
+from bot.services.dog_service import DOG_ATTACK_COOLDOWN_SECONDS, DogError, feed_dog
 from bot.texts.dog_texts import dog_fed, dog_full_already, dog_leveled_up
+from bot.utils.formatting import format_seconds
 
 router = Router(name="private_dog")
 
@@ -27,7 +28,10 @@ async def cb_my_dogs(callback: CallbackQuery, user: User) -> None:
         rows.append([InlineKeyboardButton(text=label, callback_data=f"dog_manage:{d.id}")])
     rows.append([InlineKeyboardButton(text="🔙 برگشت", callback_data="menu:main")])
 
-    await callback.message.edit_text("🐕 سگ‌های تو", reply_markup=InlineKeyboardMarkup(inline_keyboard=rows))
+    await callback.message.edit_text(
+        "🐕 سگ‌های تو\n\nبرای حمله با یکی از این سگ‌ها تو گروه بنویس:\n[اسم سگ] بگیرش (ریپلای روی پیام هدف)",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=rows),
+    )
     await callback.answer()
 
 
@@ -40,10 +44,26 @@ async def cb_dog_manage(callback: CallbackQuery, user: User) -> None:
         return
 
     breed = await dog_repo.get_dog_breed(dog.dog_id)
+
+    cooldown_line = "🟢 آماده حمله"
+    if dog.attack_cooldown_until:
+        from datetime import datetime
+
+        cd_dt = datetime.fromisoformat(dog.attack_cooldown_until)
+        if cd_dt > datetime.utcnow():
+            seconds_left = int((cd_dt - datetime.utcnow()).total_seconds())
+            cooldown_line = f"🕐 {format_seconds(seconds_left)} تا حمله بعدی مونده"
+
     text = (
         f"{breed.emoji if breed else '🐶'} {dog.nickname or (breed.name_fa if breed else '')}\n\n"
+        f"نژاد: {breed.name_fa if breed else '-'}\n"
         f"لول: {dog.dog_level}\n"
-        f"XP: {dog.dog_xp}"
+        f"ایکس‌پی: {dog.dog_xp}\n"
+        f"قدرت حمله: {dog.attack_damage_min} تا {dog.attack_damage_max} دمیج\n"
+        f"کولدان حمله: {format_seconds(DOG_ATTACK_COOLDOWN_SECONDS)}\n"
+        f"وضعیت: {cooldown_line}\n\n"
+        f"برای حمله تو گروه بنویس (ریپلای روی پیام هدف):\n"
+        f"«{dog.nickname or 'اسم سگت'} بگیرش»"
     )
     rows = [
         [InlineKeyboardButton(text="🍖 غذا دادن", callback_data=f"dog_feed_menu:{user_dog_id}")],
@@ -60,7 +80,7 @@ async def cb_dog_feed_menu(callback: CallbackQuery, user: User) -> None:
     rows = [
         [
             InlineKeyboardButton(
-                text=f"{f['emoji']} {f['name_fa']} (+{f['xp_amount']} XP)",
+                text=f"{f['emoji']} {f['name_fa']} (+{f['xp_amount']} ایکس‌پی)",
                 callback_data=f"dog_feed:{user_dog_id}:{f['food_id']}",
             )
         ]

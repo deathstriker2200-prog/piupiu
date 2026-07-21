@@ -9,7 +9,7 @@ def admin_main_keyboard() -> InlineKeyboardMarkup:
                 InlineKeyboardButton(text="📢 ارسال همگانی", callback_data="admin:broadcast"),
             ],
             [
-                InlineKeyboardButton(text="💊 دادن پول/XP/الماس", callback_data="admin:grant"),
+                InlineKeyboardButton(text="💊 دادن پول/ایکس‌پی/الماس", callback_data="admin:grant"),
                 InlineKeyboardButton(text="🚫 بن/آن‌بن", callback_data="admin:ban"),
             ],
             [

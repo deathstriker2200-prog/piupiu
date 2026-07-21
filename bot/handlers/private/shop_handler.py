@@ -4,9 +4,8 @@ from aiogram.types import CallbackQuery, Message
 
 from bot.database.models.user import User
 from bot.database.repositories import dog_repo, weapon_repo
-from bot.keyboards.common import back_keyboard, confirm_cancel_keyboard
+from bot.keyboards.common import back_keyboard
 from bot.keyboards.shop_kb import (
-    dog_list_keyboard,
     shop_hub_keyboard,
     weapon_shop_keyboard,
     weapon_shop_text,
@@ -14,7 +13,6 @@ from bot.keyboards.shop_kb import (
 from bot.services.dog_service import DogError, purchase_dog
 from bot.services.shop_service import ShopError, purchase_ammo, purchase_weapon
 from bot.texts.common_texts import not_enough_level, not_enough_money
-from bot.texts.dog_texts import dog_purchased
 from bot.utils.formatting import format_currency, format_seconds
 from bot.utils.weapon_names import find_weapon_id_by_fa_name
 
@@ -46,7 +44,7 @@ async def cb_shop_weapons(callback: CallbackQuery, user: User) -> None:
 @router.callback_query(lambda c: c.data == "weapon_buy_help")
 async def cb_weapon_buy_help(callback: CallbackQuery, user: User) -> None:
     await callback.answer(
-        "برای خرید، دستور زیر رو بفرست:\n\nخرید کلاشنیکف\n\nیا\n\nخرید آرپی‌جی\n\nیا\n\nخرید شاتگان",
+        "برای خرید دستور زیر رو بفرست:\n\nخرید [اسم سلاح]\n\nمثلا: خرید کلاشنیکف",
         show_alert=True,
     )
 
@@ -127,67 +125,93 @@ async def _reply_shop_error(message: Message, error: str) -> None:
 @router.callback_query(lambda c: c.data == "shop_cat:dogs" or c.data == "menu:shop_dogs")
 async def cb_shop_dogs(callback: CallbackQuery, user: User) -> None:
     dogs = await dog_repo.list_dog_breeds()
-    await callback.message.edit_text(
-        "🐶 سگ‌ها - بر اساس قدرت مرتب شدن\n"
-        "✅ = می‌تونی بخری   🔒 = پول کافی نیست   ❌ = لولت کافی نیست",
-        reply_markup=dog_list_keyboard(dogs, user.level, user.tiriak_point),
-    )
+    lines = [
+        "🐶 فروشگاه سگ‌ها",
+        "",
+        "🟢 قابل خرید   🔴 پول کافی نداری   🔒 هنوز لول لازم رو نداری",
+        "",
+    ]
+    for d in sorted(dogs, key=lambda x: x.power):
+        can_afford = user.tiriak_point >= d.price
+        if user.level < d.required_level:
+            mark = "🔒"
+        elif not can_afford:
+            mark = "🔴"
+        else:
+            mark = "🟢"
+        price_label = "رایگان" if d.price == 0 else f"{format_currency(d.price)}💊"
+        lines.append(f"{d.emoji} {d.name_fa}")
+        lines.append(f"لول: {d.required_level} | قیمت: {price_label}")
+        lines.append(
+            f"قدرت: {d.power} | سلامتی: {d.hp} | شانس دفاع: {int(d.defense_chance*100)}٪ | "
+            f"درآمد ساعتی: {format_currency(d.income_per_hour)}TP"
+        )
+        lines.append(mark)
+        lines.append("")
+
+    text = "\n".join(lines).rstrip()
+    text += "\n\nبرای خرید دستور زیر رو بفرست:\n\nخرید سگ [نژاد] [اسمی که میخوای بذاری]\n\nمثلا: خرید سگ گرگ کامبیز"
+
+    await callback.message.edit_text(text, reply_markup=back_keyboard("menu:shop"))
     await callback.answer()
 
 
-@router.callback_query(lambda c: c.data and c.data.startswith("dog_info:"))
-async def cb_dog_info(callback: CallbackQuery, user: User) -> None:
-    dog_id = callback.data.split(":", 1)[1]
-    breed = await dog_repo.get_dog_breed(dog_id)
-    if breed is None:
-        await callback.answer("پیدا نشد", show_alert=True)
+DOG_BREED_FA_NAME_TO_ID = {
+    "ولگرد": "stray",
+    "سگ ولگرد": "stray",
+    "دوبرمن": "doberman",
+    "گرگ": "wolf",
+}
+
+
+def _find_dog_breed_id(text: str) -> str | None:
+    cleaned = " ".join(text.strip().split())
+    if cleaned in DOG_BREED_FA_NAME_TO_ID:
+        return DOG_BREED_FA_NAME_TO_ID[cleaned]
+    for name, breed_id in DOG_BREED_FA_NAME_TO_ID.items():
+        if name in cleaned:
+            return breed_id
+    return None
+
+
+@router.message(lambda m: m.text and m.text.strip().startswith("خرید سگ"))
+async def handle_dog_purchase_text(message: Message, user: User) -> None:
+    rest = message.text.strip()[len("خرید سگ"):].strip()
+    parts = rest.split()
+    if len(parts) < 2:
+        await message.reply(
+            "برای خرید سگ دستور رو کامل بفرست:\n\nخرید سگ [نژاد] [اسم]\n\nمثلا: خرید سگ گرگ کامبیز"
+        )
         return
 
-    text = (
-        f"{breed.emoji} {breed.name_fa}\n\n"
-        f"قدرت: {breed.power}\n"
-        f"HP: {breed.hp}\n"
-        f"شانس دفاع: {int(breed.defense_chance * 100)}%\n"
-        f"درآمد ساعتی: {breed.income_per_hour}\n"
-        f"قیمت: {format_currency(breed.price)} تریاک‌پوینت\n"
-        f"لول لازم: {breed.required_level}"
-    )
-    if user.level < breed.required_level:
-        text += f"\n\n❌ لولت کافی نیست (لول تو: {user.level})"
-        await callback.message.edit_text(text, reply_markup=back_keyboard("shop_cat:dogs"))
-        await callback.answer()
+    # آخرین کلمه اسم سگه، بقیه اسم نژاد (چون بعضی نژادها دو کلمه‌ای هستن مثل "سگ ولگرد")
+    nickname = parts[-1]
+    breed_text = " ".join(parts[:-1])
+    breed_id = _find_dog_breed_id(breed_text)
+
+    if breed_id is None:
+        await message.reply("همچین نژادی نداریم، نژادهای موجود: ولگرد، دوبرمن، گرگ 🤔")
         return
 
-    await callback.message.edit_text(
-        text,
-        reply_markup=confirm_cancel_keyboard(
-            confirm_callback=f"dog_buy:{dog_id}", cancel_callback="shop_cat:dogs",
-            confirm_text="خرید",
-        ),
-    )
-    await callback.answer()
-
-
-@router.callback_query(lambda c: c.data and c.data.startswith("dog_buy:"))
-async def cb_dog_buy(callback: CallbackQuery, user: User) -> None:
-    dog_id = callback.data.split(":", 1)[1]
     try:
-        await purchase_dog(user.user_id, dog_id)
+        await purchase_dog(user.user_id, breed_id, nickname)
     except DogError as e:
         error = str(e)
         if error == "not_enough_money":
-            await callback.answer(not_enough_money(), show_alert=True)
+            await message.reply(not_enough_money())
         elif error.startswith("level_required:"):
             required = int(error.split(":", 1)[1])
-            await callback.answer(not_enough_level(required), show_alert=True)
+            await message.reply(not_enough_level(required))
+        elif error == "invalid_name":
+            await message.reply("اسم سگ باید بین ۱ تا ۲۰ کاراکتر باشه")
+        elif error == "name_taken":
+            await message.reply("یه سگ دیگه از قبل همین اسم رو داره، یه اسم دیگه انتخاب کن")
         else:
-            await callback.answer("مشکلی پیش اومد", show_alert=True)
+            await message.reply("مشکلی پیش اومد، دوباره امتحان کن")
         return
 
-    breed = await dog_repo.get_dog_breed(dog_id)
-    await callback.message.edit_text(
-        dog_purchased(breed.name_fa if breed else "سگ"), reply_markup=back_keyboard("menu:main")
-    )
-    await callback.answer()
+    breed = await dog_repo.get_dog_breed(breed_id)
+    breed_name = breed.name_fa if breed else "سگ"
+    await message.reply(f"✅ یه {breed_name} خریدی و اسمش رو گذاشتی «{nickname}» 🐶")
 
 

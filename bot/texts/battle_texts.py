@@ -5,7 +5,7 @@
 
 WELCOME_GROUP = (
     "سلام رفقا بنگ بنگ اومد وسط 💊🔫\n"
-    "همه با ۲۰۰ HP شروع می‌کنید برید بترکونید 😎"
+    "همه با ۲۰۰ سلامتی شروع می‌کنید برید بترکونید 😎"
 )
 
 
@@ -37,7 +37,7 @@ def attack_result_alive(
     return (
         f"{header_emoji} با «{weapon_name}» به {target_name} شلیک کردی و {damage} دمیج زدی!\n\n"
         f"💰 +{tiriak_reward} تریاک‌پوینت\n"
-        f"⭐ +{xp_reward} XP\n\n"
+        f"⭐ +{xp_reward} ایکس‌پی\n\n"
         f"❤️ سلامتی باقی‌مانده {target_name}:\n"
         f"{max(remaining_hp, 0)} / {max_hp}"
     )
@@ -59,7 +59,7 @@ def attack_result_killed(
         f"{header_emoji} با «{weapon_name}» به {target_name} شلیک کردی و {damage} دمیج زدی!\n\n"
         f"☠️ {target_name} مُرد و {kill_bonus} تریاک‌پوینت از جایزه کشتن دریافت کردی.\n\n"
         f"💰 +{total_tiriak_reward} تریاک‌پوینت\n"
-        f"⭐ +{xp_reward} XP\n\n"
+        f"⭐ +{xp_reward} ایکس‌پی\n\n"
         f"⏳ {target_name} تا {respawn_minutes} دقیقه دیگر مرده می‌ماند و سپس با سلامتی کامل زنده می‌شود."
     )
 
@@ -77,9 +77,9 @@ OUTCOME_LABELS_FA = {
     "miss": "💨 خطا رفت",
     "blocked": "🛡 تا حدی دفاع شد",
     "perfect_block": "🧱 دفاع کامل، هیچ دمیجی نخورد",
-    "critical": "💥 Critical",
-    "headshot": "🎯 Headshot",
-    "lucky_hit": "🍀 Lucky Hit",
+    "critical": "💥 کریتیکال",
+    "headshot": "🎯 هدشات",
+    "lucky_hit": "🍀 ضربه شانسی",
 }
 
 
@@ -101,14 +101,13 @@ def cooldown_active(seconds_left: int) -> str:
 
 def target_is_dead_already(target_name: str, minutes_left: int) -> str:
     return (
-        f"☠️ {target_name} همین الان مرده است.\n\n"
-        f"⏳ تا {minutes_left} دقیقه دیگر زنده نمی‌شود.\n\n"
-        "🚫 فعلاً نمی‌توانی به او شلیک کنی."
+        f"☠️ متاسفانه به {target_name} نمی‌تونی شلیک کنی، او همین الان مرده است\n\n"
+        f"⏳ تا {minutes_left} دقیقه دیگر زنده نمی‌شود"
     )
 
 
-def attacker_is_dead() -> str:
-    return "تو الان مردی نمیتونی حمله کنی صبر کن respawn شی 💀"
+def attacker_is_dead(minutes_left: int) -> str:
+    return f"☠️ تو همین الان مردی\n\nتا {minutes_left} دقیقه دیگر زنده نمی‌شوی"
 
 
 def attacker_is_jailed(minutes_left: int) -> str:
@@ -124,12 +123,20 @@ def out_of_ammo(weapon_name: str) -> str:
 
 
 def self_shoot_attempt() -> str:
-    return "😅 عزیز دل به خود...\n\nنمی‌تونی به خودت شلیک کنی!"
+    return "😅 عزیز دل به خودت که نمیتونی شلیک کنی"
 
 
 def bot_shoot_attempt() -> str:
-    return "😅 رو من که نمیشه شلیک کرد، من فقط این وسط رفری می‌کنم نه اینکه HP داشته باشم 😎"
+    return "من خودم رباتم، اسلحتو رو من میکشی!؟ 😅"
 
 
 def respawned(user_name: str) -> str:
     return f"🌟 {user_name} دوباره زنده شد بزن بریم"
+
+
+def level_up_announcement(user_id: int, user_name: str, new_level: int) -> str:
+    """پیام تبریک لول آپ - کاربر تگ میشه (لینک به پروفایلش) تا حتما نوتیف بگیره"""
+    return (
+        f"🎉 تبریک <a href=\"tg://user?id={user_id}\">{user_name}</a> "
+        f"لول آپ شدی و به لول {new_level} رسیدی 🌟"
+    )

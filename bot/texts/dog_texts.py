@@ -3,7 +3,7 @@ def dog_full_already() -> str:
 
 
 def dog_fed(dog_name: str, xp_gained: int) -> str:
-    return f"🐶 {dog_name} خورد و خوشحال شد +{xp_gained} XP گرفت"
+    return f"🐶 {dog_name} خورد و خوشحال شد +{xp_gained} ایکس‌پی گرفت"
 
 
 def dog_leveled_up(dog_name: str, new_level: int) -> str:

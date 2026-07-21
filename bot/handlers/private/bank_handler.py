@@ -36,7 +36,7 @@ def bank_menu_keyboard():
                 InlineKeyboardButton(text="⬆️ واریز", callback_data="bank:deposit"),
                 InlineKeyboardButton(text="⬇️ برداشت", callback_data="bank:withdraw"),
             ],
-            [InlineKeyboardButton(text="🔧 ارتقای ظرفیت", callback_data="bank:upgrade")],
+            [InlineKeyboardButton(text="✅ ارتقای ظرفیت", callback_data="bank:upgrade")],
             [InlineKeyboardButton(text="🔙 برگشت", callback_data="menu:main")],
         ]
     )

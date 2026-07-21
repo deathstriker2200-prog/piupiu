@@ -10,7 +10,7 @@ router = Router(name="private_leaderboard")
 
 BOARD_LABELS = {
     "level": "🌟 بیشترین لول",
-    "xp": "✨ بیشترین XP",
+    "xp": "✨ بیشترین ایکس‌پی",
     "tiriak_point": "💊 بیشترین تریاک‌پوینت",
     "kills": "💀 بیشترین کشته",
 }

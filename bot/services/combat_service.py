@@ -44,6 +44,7 @@ class AttackResult:
     total_tiriak_reward: int   # مجموع همه جایزه‌های تریاک‌پوینت این شلیک برای مهاجم
     ran_out_of_ammo: bool      # همین شلیک آخرین تیر رو مصرف کرد
     respawn_minutes: int       # فقط اگه target_died باشه معتبره
+    new_level: int = 0         # اگه بعد این شلیک لول‌آپ شد، لول جدید؛ وگرنه 0
 
 
 STEAL_PERCENT_ON_KILL = 0.05  # درصد تریاک‌پوینت که هنگام کشتن از قربانی دزدیده میشه
@@ -58,12 +59,18 @@ async def resolve_attack(attacker_id: int, target_id: int) -> AttackResult:
         raise CombatError("یکی از بازیکن‌ها پیدا نشد")
 
     if attacker.is_dead:
-        raise CombatError("attacker_dead")
+        seconds_left = 0
+        if attacker.died_at:
+            died_at_dt = datetime.fromisoformat(attacker.died_at)
+            respawn_dt = died_at_dt + timedelta(seconds=DEATH_RESPAWN_SECONDS)
+            seconds_left = max(0, int((respawn_dt - datetime.utcnow()).total_seconds()))
+        raise CombatError(f"attacker_dead:{seconds_left}")
 
     if attacker.jailed_until:
         jailed_until_dt = datetime.fromisoformat(attacker.jailed_until)
         if jailed_until_dt > datetime.utcnow():
-            raise CombatError("attacker_jailed")
+            seconds_left = max(0, int((jailed_until_dt - datetime.utcnow()).total_seconds()))
+            raise CombatError(f"attacker_jailed:{seconds_left}")
 
     if target.is_dead:
         seconds_left = 0
@@ -128,6 +135,14 @@ async def resolve_attack(attacker_id: int, target_id: int) -> AttackResult:
     if outcome.result == "perfect_block":
         damage = 0
 
+    # اعمال درصد دفاع تجهیزات هدف (جلیقه/کلاه/چکمه/دستکش) روی دمیج نهایی
+    if damage > 0:
+        from bot.database.repositories import equipment_repo
+
+        defense_percent = await equipment_repo.get_total_defense_percent(target_id)
+        if defense_percent > 0:
+            damage = max(1, int(damage * (1 - defense_percent / 100)))
+
     new_hp = target.hp - damage
     target_died = damage > 0 and new_hp <= 0
 
@@ -155,8 +170,11 @@ async def resolve_attack(attacker_id: int, target_id: int) -> AttackResult:
     total_tiriak_reward = tiriak_reward + kill_bonus_tiriak
     if total_tiriak_reward > 0:
         await user_repo.adjust_tiriak(attacker_id, total_tiriak_reward)
+
+    levels_gained: list[int] = []
     if xp_reward > 0:
-        await add_xp_and_check_levelup(attacker_id, xp_reward)
+        levels_gained = await add_xp_and_check_levelup(attacker_id, xp_reward)
+    new_level = levels_gained[-1] if levels_gained else 0
 
     # ست کردن کولدان بعدی
     cooldown_until = datetime.utcnow() + timedelta(seconds=weapon_row["cooldown_sec"])
@@ -192,6 +210,7 @@ async def resolve_attack(attacker_id: int, target_id: int) -> AttackResult:
         total_tiriak_reward=total_tiriak_reward,
         ran_out_of_ammo=ran_out_of_ammo,
         respawn_minutes=respawn_minutes,
+        new_level=new_level,
     )
 
 

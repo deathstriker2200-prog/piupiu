@@ -78,6 +78,15 @@ async def handle_attack(message: Message, user: User) -> None:
     if result.ran_out_of_ammo:
         await message.answer(battle_texts.ammo_depleted(result.weapon_name))
 
+    if result.new_level > 0:
+        attacker_display_name = message.from_user.full_name or message.from_user.username or "بازیکن"
+        await message.answer(
+            battle_texts.level_up_announcement(
+                message.from_user.id, attacker_display_name, result.new_level
+            ),
+            parse_mode="HTML",
+        )
+
     if result.target_died:
         # چک اینکه آیا بانک قربانی خالی بوده و پول از دست رفته یا نه رو داخل combat_service مدیریت کردیم
         from bot.database.repositories import bank_repo
@@ -128,10 +137,18 @@ async def handle_attack(message: Message, user: User) -> None:
 
 
 async def _handle_combat_error(message: Message, error: str, target_name: str = "حریف") -> None:
-    if error == "attacker_dead":
-        await message.reply(battle_texts.attacker_is_dead())
-    elif error == "attacker_jailed":
-        await message.reply(battle_texts.attacker_is_jailed(0))
+    if error.startswith("attacker_dead"):
+        seconds_left = 0
+        if ":" in error:
+            seconds_left = int(error.split(":", 1)[1])
+        minutes_left = max(1, (seconds_left + 59) // 60) if seconds_left > 0 else 0
+        await message.reply(battle_texts.attacker_is_dead(minutes_left))
+    elif error.startswith("attacker_jailed"):
+        seconds_left = 0
+        if ":" in error:
+            seconds_left = int(error.split(":", 1)[1])
+        minutes_left = max(1, (seconds_left + 59) // 60) if seconds_left > 0 else 0
+        await message.reply(battle_texts.attacker_is_jailed(minutes_left))
     elif error.startswith("target_dead"):
         seconds_left = 0
         if ":" in error:

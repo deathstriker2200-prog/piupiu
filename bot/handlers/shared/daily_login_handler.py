@@ -22,7 +22,7 @@ async def cmd_daily_login(message: Message, user: User) -> None:
 
     lines = [
         f"📅 حضور روزانه ثبت شد روز {result['streak']} پشت سر هم 🔥",
-        f"گرفتی: {format_currency(result['reward_tiriak'])} تریاک‌پوینت و {result['reward_xp']} XP",
+        f"گرفتی: {format_currency(result['reward_tiriak'])} تریاک‌پوینت و {result['reward_xp']} ایکس‌پی",
     ]
     if result["reward_diamond"] > 0:
         lines.append(f"💎 {result['reward_diamond']} الماس هم جایزه گرفتی")
